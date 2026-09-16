@@ -28,7 +28,7 @@ export default function Navbar() {
         </li>
       </ul>
       <div>
-        <a href='/LACSAMANA_JHAN_PAUL.pdf' download="LACSAMANA_JHAN_PAUL.pdf" className="resume-button">
+        <a href='/LACSAMANA_JHAN_PAUL.pdf' download="LACSAMANA_JHAN_PAUL.pdf" className="resume-button" target="_blank">
           Resume ⬇
         </a>
       </div>
