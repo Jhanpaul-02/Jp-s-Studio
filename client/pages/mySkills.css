@@ -1,0 +1,99 @@
+.skills-section {
+	width: min(92vw, 1100px);
+	margin: 2rem auto 8rem;
+	padding: 0 2rem;
+}
+
+.skills-content {
+	max-width: 920px;
+	margin-left: 5.5rem;
+}
+
+.skills-eyebrow {
+	margin: 0 0 1.25rem;
+	color: #555555;
+	font-family: monospace;
+	font-size: 0.8rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.skills-content h2 {
+	max-width: 560px;
+	margin: 0;
+	color: #111111;
+	font-size: clamp(2rem, 4vw, 3.25rem);
+	line-height: 1.08;
+	letter-spacing: -0.03em;
+}
+
+.skills-intro {
+	max-width: 650px;
+	margin: 1.5rem 0 4rem;
+	color: #666666;
+	font-size: 1rem;
+	line-height: 1.7;
+}
+
+.skill-groups {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 3rem 4rem;
+}
+
+.skill-group h3 {
+	margin: 0 0 1rem;
+	color: #8a8a8a;
+	font-family: monospace;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.skill-group ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.7rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.skill-group li {
+	padding: 0.7rem 0.95rem;
+	border: 1px solid #dddddd;
+	border-radius: 0.35rem;
+	color: #333333;
+	font-family: monospace;
+	font-size: 0.85rem;
+	transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.skill-group li:hover {
+	border-color: #000000;
+	box-shadow: 3px 3px 0 #000000;
+	transform: translate(-1px, -1px);
+}
+
+@media (max-width: 700px) {
+	.skills-section {
+		width: auto;
+		margin: 5rem 1rem 6rem;
+		padding: 0 1rem;
+	}
+
+	.skills-content {
+		margin-left: 0;
+	}
+
+	.skills-intro {
+		margin-bottom: 3rem;
+	}
+
+	.skill-groups {
+		grid-template-columns: 1fr;
+		gap: 2.5rem;
+	}
+}
