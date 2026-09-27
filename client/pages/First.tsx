@@ -17,7 +17,7 @@ export default function First() {
         </div>
         <div className="description">
           <p>
-            Im Jp, I create clean, efficient, and functional web solutions that
+            I&apos;m Jp, I create clean, efficient, and functional web solutions that
             bring
           </p>
           <p>
