@@ -5,6 +5,7 @@ import Skills from '../pages/mySkills'
 import Projects from '../pages/myProjects';
 import AboutMe from '../pages/AboutMe';
 import ContactMe from '../pages/ContactMe';
+import Footer from '../pages/Footer';
 
 const sora = Sora({ subsets: ['latin'], weight: ['400','600','700'] });
 
@@ -17,6 +18,7 @@ export default function Home() {
       <Projects/>
       <AboutMe/>
       <ContactMe/>
+      <Footer/>
     </>
   );
 }
