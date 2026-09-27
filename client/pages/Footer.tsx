@@ -11,8 +11,8 @@ export default function Footer() {
             <div className="footer-inner">
                 <div className="footer-main">
                     <Link className="footer-brand" href="/" aria-label="JP Studios home">
-                        <Image src={Logo} alt="" width={36} height={36} className="footer-logo" />
-                        <span>JP Studios</span>
+                        <Image src={Logo} alt="" width={50} height={50} className="footer-logo" />
+                        <span>Jp&apos;s Studio</span>
                     </Link>
 
                     <nav className="footer-nav" aria-label="Footer navigation">

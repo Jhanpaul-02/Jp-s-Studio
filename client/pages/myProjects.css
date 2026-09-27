@@ -247,7 +247,8 @@
 }
 
 .projects-shell {
-    max-width: 980px;
+    width: min(calc(66.6667vw + 182px), 100%);
+    max-width: none;
     margin: 0 auto;
 }
 
@@ -418,6 +419,17 @@
 .preview-chart span:nth-child(3) { height: 45%; }
 .preview-chart span:nth-child(4) { height: 90%; }
 .preview-chart span:nth-child(5) { height: 62%; }
+
+@media (max-width: 760px) {
+    .projects-section {
+        padding-right: 1.1rem;
+        padding-left: 1.1rem;
+    }
+
+    .projects-shell {
+        width: 100%;
+    }
+}
 
 .project-info {
     position: relative;

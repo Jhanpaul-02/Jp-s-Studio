@@ -115,3 +115,95 @@
   background: transparent;
   transform: translateY(-6px);
 }
+
+@media (max-width: 1024px) {
+  .left-side {
+    margin-left: 2rem;
+  }
+
+  .home-container {
+    width: 96vw;
+    padding: 0 1rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-container {
+    width: auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+    margin: 2rem auto 3rem;
+    padding: 0 1.25rem;
+  }
+
+  .left-side {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .upper,
+  .lower {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    padding-right: 0;
+    font-size: 2.75rem;
+    line-height: 1.05;
+  }
+
+  .upper h1,
+  .lower h1 {
+    margin: 0;
+  }
+
+  .upper-left {
+    font-size: 2.2rem;
+  }
+
+  .upper-right,
+  .lower-left,
+  .lower-right {
+    font-size: 2.75rem;
+  }
+
+  .description {
+    max-width: 38rem;
+    padding-top: 1.25rem;
+    font-size: 1rem;
+  }
+
+  .description p {
+    margin: 0 0 0.45rem;
+  }
+
+  .social-icons ul {
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+    padding: 0;
+  }
+
+  .social-icons ul li,
+  .social-icons .facebook-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .right-side {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .image-container {
+    width: min(78vw, 19rem);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .profile-mascot {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
