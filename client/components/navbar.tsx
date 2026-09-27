@@ -9,7 +9,7 @@ export default function Navbar() {
       {/* Logo + Title */}
       <div className="logo-title">
         <Image src={Logo} alt="Jp's Studio Logo" width={50} height={50} />
-        <h2>Jp's Studio</h2>
+        <h2>Jp&apos;s Studio</h2>
       </div>
 
       {/* Navigation Links */}
@@ -24,7 +24,7 @@ export default function Navbar() {
           <Link href="/projects">Projects</Link>
         </li>
         <li>
-          <Link href="/contact">Contact Me</Link>
+          <Link href="#contact">Contact Me</Link>
         </li>
       </ul>
       <div>
