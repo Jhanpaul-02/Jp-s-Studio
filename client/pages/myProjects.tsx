@@ -1,6 +1,6 @@
 import "./myProjects.css";
 
-const projects = [
+export const projects = [
     {
         title: "Atlas Commerce",
         category: "E-commerce platform",
