@@ -1,12 +1,63 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import { pool } from '../db/pool'
+import { getStorageClient } from '../config/storage'
 import { requireAdmin } from '../middleware/requireAdmin'
 
 const router = Router()
+const thumbnailBucket = 'project-thumbnails'
+const thumbnailContentTypes = ['image/jpeg', 'image/png', 'image/webp']
+const parseThumbnail = express.raw({ type: thumbnailContentTypes, limit: '5mb' })
 
 router.get('/', async (_request, response) => {
   const result = await pool.query('SELECT * FROM projects ORDER BY id')
   response.json(result.rows)
+})
+
+router.post('/:id/thumbnail', requireAdmin, parseThumbnail, async (request, response) => {
+  const projectId = Number(request.params.id)
+  const contentType = request.get('content-type')?.split(';')[0].trim().toLowerCase()
+
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    response.status(400).json({ error: 'Project id must be a positive integer' })
+    return
+  }
+
+  if (!contentType || !thumbnailContentTypes.includes(contentType) || !Buffer.isBuffer(request.body) || request.body.length === 0) {
+    response.status(400).json({ error: 'Upload a JPEG, PNG, or WebP thumbnail' })
+    return
+  }
+
+  const project = await pool.query('SELECT id FROM projects WHERE id = $1', [projectId])
+  if (project.rowCount === 0) {
+    response.status(404).json({ error: 'Project not found' })
+    return
+  }
+
+  const storage = getStorageClient()
+  if (!storage) {
+    response.status(503).json({ error: 'Thumbnail storage is not configured on the server' })
+    return
+  }
+
+  const objectPath = `${projectId}/thumbnail`
+  const { error: uploadError } = await storage.storage.from(thumbnailBucket).upload(objectPath, request.body, {
+    cacheControl: '60',
+    contentType,
+    upsert: true,
+  })
+
+  if (uploadError) {
+    response.status(502).json({ error: 'Could not upload the thumbnail to storage' })
+    return
+  }
+
+  const { data } = storage.storage.from(thumbnailBucket).getPublicUrl(objectPath)
+  const result = await pool.query(
+    'UPDATE projects SET thumbnail_url = $1 WHERE id = $2 RETURNING *',
+    [data.publicUrl, projectId]
+  )
+
+  response.json(result.rows[0])
 })
 
 
