@@ -11,12 +11,16 @@
 	min-height: 100vh;
 	min-height: 100svh;
 	display: grid;
-	grid-template-columns: 166px minmax(0, 1fr) 238px;
+	grid-template-columns: 166px minmax(0, 1fr);
 	grid-template-rows: 64px minmax(0, 1fr);
 	background: #fff;
 	color: #111;
 	font-family: var(--font-sora), sans-serif;
 	font-size: 0.78rem;
+}
+
+.admin-shell--editor-open {
+	grid-template-columns: 166px minmax(0, 1fr) 340px;
 }
 
 .admin-sidebar {
@@ -146,7 +150,7 @@
 }
 
 .admin-topbar {
-	grid-column: 2 / 4;
+	grid-column: 2 / -1;
 	grid-row: 1;
 	min-width: 0;
 	display: flex;
@@ -234,6 +238,111 @@
 	opacity: 0.55;
 }
 
+.admin-delete-dialog {
+	width: min(420px, calc(100vw - 32px));
+	max-width: none;
+	max-height: calc(100svh - 32px);
+	margin: auto;
+	padding: 0;
+	overflow-y: auto;
+	border: 1px solid #c9c9c9;
+	border-radius: 6px;
+	background: #fff;
+	color: #111;
+	box-shadow: 0 18px 55px rgb(0 0 0 / 22%);
+	font: inherit;
+}
+
+.admin-delete-dialog::backdrop {
+	background: rgb(0 0 0 / 48%);
+	backdrop-filter: blur(2px);
+}
+
+.admin-delete-dialog-content {
+	display: grid;
+	gap: 14px;
+	padding: 20px;
+}
+
+.admin-delete-dialog h2 {
+	margin: 0;
+	font-size: 0.92rem;
+	font-weight: 650;
+}
+
+.admin-delete-dialog p {
+	margin: 0;
+	color: #555;
+	font-size: 0.66rem;
+	line-height: 1.55;
+}
+
+.admin-delete-project-name {
+	color: #111;
+	font-weight: 650;
+	overflow-wrap: anywhere;
+}
+
+.admin-delete-confirmation-field {
+	display: grid;
+	gap: 6px;
+	font-size: 0.62rem;
+	font-weight: 600;
+}
+
+.admin-delete-confirmation-field input {
+	width: 100%;
+	min-width: 0;
+	min-height: 36px;
+	padding: 7px 9px;
+	border: 1px solid #777;
+	border-radius: 4px;
+	background: #fff;
+	color: #111;
+	font: inherit;
+	font-size: 0.68rem;
+}
+
+.admin-delete-confirmation-field input:focus-visible,
+.admin-delete-confirm-button:focus-visible {
+	outline: 2px solid #222;
+	outline-offset: 2px;
+}
+
+.admin-delete-error {
+	color: #a32626 !important;
+}
+
+.admin-delete-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding-top: 2px;
+}
+
+.admin-delete-confirm-button {
+	min-height: 32px;
+	padding: 0 11px;
+	border: 1px solid #a32626;
+	border-radius: 4px;
+	background: #a32626;
+	color: #fff;
+	font: inherit;
+	font-size: 0.64rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.admin-delete-confirm-button:hover:not(:disabled) {
+	border-color: #821b1b;
+	background: #821b1b;
+}
+
+.admin-delete-confirm-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
 .admin-main {
 	grid-column: 2;
 	grid-row: 2;
@@ -242,7 +351,7 @@
 }
 
 .admin-main--placeholder {
-	grid-column: 2 / 4;
+	grid-column: 2 / -1;
 	display: grid;
 	align-content: start;
 }
@@ -307,11 +416,6 @@
 	font-size: 0.62rem;
 	font-weight: 700;
 }
-
-.admin-project-mark[data-accent="commerce"] { background: #e9e3d8; }
-.admin-project-mark[data-accent="workspace"] { background: #e5e5e5; }
-.admin-project-mark[data-accent="studio"] { background: #eee0e5; }
-.admin-project-mark[data-accent="analytics"] { background: #dce9e8; }
 
 .admin-project-name button {
 	padding: 0;
@@ -414,6 +518,19 @@
 	gap: 11px;
 }
 
+.admin-project-number-note {
+	margin: 0;
+	padding: 7px 8px;
+	border-left: 2px solid #355d50;
+	background: #f4f6f4;
+	color: #555;
+	font-size: 0.62rem;
+}
+
+.admin-project-number-note strong {
+	color: #171717;
+}
+
 .admin-project-form label {
 	min-width: 0;
 	display: grid;
@@ -453,6 +570,84 @@
 .admin-project-form textarea {
 	min-height: 82px;
 	resize: vertical;
+}
+
+.admin-thumbnail-field {
+	display: grid;
+	gap: 8px;
+}
+
+.admin-thumbnail-preview {
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	display: grid;
+	place-items: center;
+	border: 1px dashed #888;
+	border-radius: 4px;
+	background-color: #f1f1f1;
+	background-position: center;
+	background-size: cover;
+	color: #666;
+}
+
+.admin-thumbnail-preview span {
+	font-size: 0.62rem;
+}
+
+.admin-project-form input[type="file"] {
+	padding: 5px;
+	font-size: 0.56rem;
+}
+
+.admin-project-form input[type="file"]::file-selector-button {
+	margin-right: 7px;
+	padding: 5px 7px;
+	border: 1px solid #444;
+	border-radius: 3px;
+	background: #f5f5f5;
+	color: #111;
+	font: inherit;
+	cursor: pointer;
+}
+
+.admin-thumbnail-filename {
+	color: #555;
+	font-size: 0.56rem;
+	font-weight: 400;
+	overflow-wrap: anywhere;
+}
+
+.admin-featured-control {
+	display: grid;
+	gap: 5px;
+	padding: 9px;
+	border: 1px solid #bbb;
+	border-radius: 4px;
+}
+
+.admin-project-form .admin-featured-control label {
+	display: flex;
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	gap: 7px;
+}
+
+.admin-project-form .admin-featured-control input[type="checkbox"] {
+	width: 15px;
+	height: 15px;
+	min-height: 15px;
+	margin: 0;
+	padding: 0;
+	accent-color: #111;
+}
+
+.admin-project-form .admin-featured-control input[type="checkbox"]:disabled {
+	cursor: not-allowed;
+}
+
+.admin-featured-control > small {
+	color: #666;
+	font-size: 0.54rem;
 }
 
 .admin-form-row {
@@ -562,7 +757,11 @@
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
-	.admin-project-form > label:nth-child(3) {
+	.admin-project-form > .admin-project-short-description {
+		grid-column: 1 / -1;
+	}
+
+	.admin-project-number-note {
 		grid-column: 1 / -1;
 	}
 
@@ -669,7 +868,7 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.admin-project-form > label:nth-child(3),
+	.admin-project-form > .admin-project-short-description,
 	.admin-form-row,
 	.admin-form-actions {
 		grid-column: auto;

@@ -277,6 +277,12 @@
     gap: 6rem;
 }
 
+.projects-state {
+    margin: 2rem 0;
+    color: #a0a0a0;
+    text-align: center;
+}
+
 .projects-more-button {
     display: flex;
     width: fit-content;
@@ -315,6 +321,7 @@
 }
 
 .project-preview {
+    position: relative;
     display: grid;
     aspect-ratio: 1.55;
     place-items: center;
@@ -324,9 +331,12 @@
     overflow: hidden;
 }
 
-.project-row.workspace .project-preview { background: #ded8cd; }
-.project-row.studio .project-preview { background: #e4c4ce; }
-.project-row.analytics .project-preview { background: #bddcdb; }
+.project-thumbnail-image {
+    position: absolute;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+}
 
 .preview-window {
     width: 86%;
@@ -339,10 +349,6 @@
     box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.14);
     transform: rotate(-2deg);
 }
-
-.workspace .preview-window { transform: rotate(2deg); }
-.studio .preview-window { background: #111111; color: #ffffff; }
-.analytics .preview-window { transform: rotate(1deg); }
 
 .preview-bar {
     display: flex;
@@ -394,10 +400,6 @@
 }
 
 .preview-blocks i:first-child { background: #f4cd35; }
-.workspace .preview-blocks i:nth-child(2) { background: #ef8e78; }
-.studio .preview-blocks i:first-child { background: #e86c9d; }
-.analytics .preview-blocks i:nth-child(3) { background: #55b9bd; }
-
 .preview-chart {
     display: flex;
     align-items: end;

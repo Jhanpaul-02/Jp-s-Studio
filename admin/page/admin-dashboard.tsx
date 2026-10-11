@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import './admin-dashboard.css'
@@ -10,23 +10,30 @@ type Project = {
 	id: number
 	title: string
 	category: string
+	short_description: string
 	description: string
 	stack: string[]
 	project_number: string
-	accent: string
+	thumbnail_url: string | null
+	live_url: string | null
+	is_featured: boolean
 }
 
-type ProjectDraft = Omit<Project, 'id' | 'stack'> & { stackText: string }
+type ProjectDraft = Omit<Project, 'id' | 'stack' | 'project_number' | 'thumbnail_url' | 'live_url'> & { stackText: string; live_url: string }
 type Section = 'dashboard' | 'projects' | 'skills' | 'about'
 
 const emptyDraft: ProjectDraft = {
 	title: '',
 	category: '',
+	short_description: '',
 	description: '',
 	stackText: '',
-	project_number: '',
-	accent: 'workspace',
+	live_url: '',
+	is_featured: false,
 }
+
+const thumbnailContentTypes = ['image/jpeg', 'image/png', 'image/webp']
+const thumbnailMaxBytes = 5 * 1024 * 1024
 
 const sections: { id: Section; label: string }[] = [
 	{ id: 'dashboard', label: 'Dashboard' },
@@ -39,10 +46,11 @@ function toDraft(project: Project): ProjectDraft {
 	return {
 		title: project.title,
 		category: project.category,
+		short_description: project.short_description,
 		description: project.description,
 		stackText: Array.isArray(project.stack) ? project.stack.join(', ') : '',
-		project_number: project.project_number,
-		accent: project.accent,
+		live_url: project.live_url ?? '',
+		is_featured: project.is_featured,
 	}
 }
 
@@ -59,7 +67,9 @@ async function projectRequest<T>(path: string, options: RequestInit = {}): Promi
 	}
 
 	if (options.body) {
-		headers.set('Content-Type', 'application/json')
+		if (typeof options.body === 'string') {
+			headers.set('Content-Type', 'application/json')
+		}
 	}
 
 	const response = await fetch(path, { ...options, headers, cache: 'no-store' })
@@ -83,16 +93,25 @@ export default function AdminDashboard() {
 	const [projects, setProjects] = useState<Project[]>([])
 	const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
 	const [draft, setDraft] = useState<ProjectDraft>(emptyDraft)
+	const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
+	const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null)
+	const thumbnailInputRef = useRef<HTMLInputElement>(null)
 	const [activeSection, setActiveSection] = useState<Section>('projects')
 	const [search, setSearch] = useState('')
 	const [errorMessage, setErrorMessage] = useState('')
 	const [notice, setNotice] = useState('')
+	const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
+	const [deleteConfirmation, setDeleteConfirmation] = useState('')
+	const [deleteError, setDeleteError] = useState('')
 	const [isCheckingSession, setIsCheckingSession] = useState(true)
 	const [isLoadingProjects, setIsLoadingProjects] = useState(true)
 	const [isCreating, setIsCreating] = useState(false)
 	const [isSaving, setIsSaving] = useState(false)
+	const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false)
 	const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null)
 	const [isSigningOut, setIsSigningOut] = useState(false)
+	const deleteDialogRef = useRef<HTMLDialogElement>(null)
+	const deleteNameInputRef = useRef<HTMLInputElement>(null)
 
 	useEffect(() => {
 		let isMounted = true
@@ -119,10 +138,6 @@ export default function AdminDashboard() {
 				}
 
 				setProjects(projectList)
-				if (projectList[0]) {
-					setSelectedProjectId(projectList[0].id)
-					setDraft(toDraft(projectList[0]))
-				}
 			} catch (requestError) {
 				if (isMounted) {
 					setErrorMessage(getMessage(requestError, 'Could not load projects.'))
@@ -149,6 +164,28 @@ export default function AdminDashboard() {
 		}
 	}, [router])
 
+	useEffect(() => {
+		return () => {
+			if (thumbnailPreviewUrl) {
+				URL.revokeObjectURL(thumbnailPreviewUrl)
+			}
+		}
+	}, [thumbnailPreviewUrl])
+
+	useEffect(() => {
+		const dialog = deleteDialogRef.current
+		if (!dialog) {
+			return
+		}
+
+		if (projectToDelete && !dialog.open) {
+			dialog.showModal()
+			deleteNameInputRef.current?.focus()
+		} else if (!projectToDelete && dialog.open) {
+			dialog.close()
+		}
+	}, [projectToDelete])
+
 	const filteredProjects = projects.filter((project) => {
 		const query = search.trim().toLowerCase()
 		return (
@@ -159,9 +196,19 @@ export default function AdminDashboard() {
 		)
 	})
 	const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null
+	const isEditorOpen = activeSection === 'projects' && (isCreating || selectedProject !== null)
+	const featuredCount = projects.filter((project) => project.is_featured).length
+	const isFeaturedLimitReached = featuredCount >= 4 && !draft.is_featured
+	const canConfirmDelete = projectToDelete !== null && deleteConfirmation === projectToDelete.title
+	const isDeletingProject = projectToDelete !== null && deletingProjectId === projectToDelete.id
 	const sectionTitle = sections.find((section) => section.id === activeSection)?.label ?? 'Dashboard'
 
 	function selectProject(project: Project) {
+		if (thumbnailInputRef.current) {
+			thumbnailInputRef.current.value = ''
+		}
+		setThumbnailFile(null)
+		setThumbnailPreviewUrl(null)
 		setSelectedProjectId(project.id)
 		setDraft(toDraft(project))
 		setIsCreating(false)
@@ -170,6 +217,11 @@ export default function AdminDashboard() {
 	}
 
 	function startNewProject() {
+		if (thumbnailInputRef.current) {
+			thumbnailInputRef.current.value = ''
+		}
+		setThumbnailFile(null)
+		setThumbnailPreviewUrl(null)
 		setSelectedProjectId(null)
 		setDraft(emptyDraft)
 		setIsCreating(true)
@@ -178,79 +230,160 @@ export default function AdminDashboard() {
 	}
 
 	function cancelEdit() {
+		if (thumbnailInputRef.current) {
+			thumbnailInputRef.current.value = ''
+		}
+		setThumbnailFile(null)
+		setThumbnailPreviewUrl(null)
+		setSelectedProjectId(null)
 		setIsCreating(false)
+		setDraft(emptyDraft)
 		setErrorMessage('')
 		setNotice('')
-		if (selectedProject) {
-			setDraft(toDraft(selectedProject))
-		} else if (projects[0]) {
-			selectProject(projects[0])
-		} else {
-			setDraft(emptyDraft)
-		}
 	}
 
 	function updateDraft(field: keyof ProjectDraft, value: string) {
 		setDraft((current) => ({ ...current, [field]: value }))
 	}
 
+	function chooseThumbnail(event: React.ChangeEvent<HTMLInputElement>) {
+		const file = event.currentTarget.files?.[0]
+		if (!file) {
+			return
+		}
+
+		setErrorMessage('')
+		if (!thumbnailContentTypes.includes(file.type)) {
+			setThumbnailFile(null)
+			setThumbnailPreviewUrl(null)
+			event.currentTarget.value = ''
+			setErrorMessage('Choose a JPEG, PNG, or WebP image.')
+			return
+		}
+		if (file.size > thumbnailMaxBytes) {
+			setThumbnailFile(null)
+			setThumbnailPreviewUrl(null)
+			event.currentTarget.value = ''
+			setErrorMessage('The thumbnail must be 5 MB or smaller.')
+			return
+		}
+
+		setThumbnailFile(file)
+		setThumbnailPreviewUrl(URL.createObjectURL(file))
+	}
+
 	async function saveProject(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault()
 		setErrorMessage('')
 		setNotice('')
+		if (isCreating && !thumbnailFile) {
+			setErrorMessage('Choose a project thumbnail before adding this project.')
+			return
+		}
 		setIsSaving(true)
 
 		const payload = {
 			title: draft.title.trim(),
 			category: draft.category.trim(),
+			short_description: draft.short_description.trim(),
 			description: draft.description.trim(),
 			stack: draft.stackText.split(',').map((technology) => technology.trim()).filter(Boolean),
-			project_number: draft.project_number.trim(),
-			accent: draft.accent,
+			live_url: draft.live_url.trim() || null,
+			is_featured: draft.is_featured,
 		}
 
+		const isNewProject = isCreating
+		let savedProject: Project
 		try {
-			const isNewProject = isCreating
 			if (!isNewProject && selectedProjectId === null) {
 				throw new Error('Select a project to edit.')
 			}
 
-			const savedProject = await projectRequest<Project>(
+			savedProject = await projectRequest<Project>(
 				isNewProject ? '/api/projects' : `/api/projects/${selectedProjectId}`,
 				{
 					method: isNewProject ? 'POST' : 'PATCH',
 					body: JSON.stringify(payload),
 				}
 			)
-
-			setProjects((current) =>
-				isNewProject
-					? [...current, savedProject]
-					: current.map((project) => (project.id === savedProject.id ? savedProject : project))
-			)
-			setSelectedProjectId(savedProject.id)
-			setDraft(toDraft(savedProject))
-			setIsCreating(false)
-			setNotice(isNewProject ? 'Project added.' : 'Changes saved.')
 		} catch (saveError) {
 			setErrorMessage(getMessage(saveError, 'Could not save the project.'))
-		} finally {
 			setIsSaving(false)
-		}
-	}
-
-	async function deleteProject(project: Project) {
-		if (!window.confirm(`Delete "${project.title}"?`)) {
 			return
 		}
 
+		if (thumbnailFile) {
+			setIsUploadingThumbnail(true)
+			try {
+				savedProject = await projectRequest<Project>(`/api/projects/${savedProject.id}/thumbnail`, {
+					method: 'POST',
+					headers: { 'Content-Type': thumbnailFile.type },
+					body: thumbnailFile,
+				})
+				setThumbnailFile(null)
+				setThumbnailPreviewUrl(null)
+				if (thumbnailInputRef.current) {
+					thumbnailInputRef.current.value = ''
+				}
+			} catch (uploadError) {
+				setProjects((current) =>
+					isNewProject
+						? [...current, savedProject]
+						: current.map((project) => (project.id === savedProject.id ? savedProject : project))
+				)
+				setSelectedProjectId(savedProject.id)
+				setDraft(toDraft(savedProject))
+				setIsCreating(false)
+				setErrorMessage(`Project details saved, but its thumbnail was not uploaded: ${getMessage(uploadError, 'Please try again.')}`)
+				setIsSaving(false)
+				setIsUploadingThumbnail(false)
+				return
+			}
+		}
+
+		setProjects((current) =>
+			isNewProject
+				? [...current, savedProject]
+				: current.map((project) => (project.id === savedProject.id ? savedProject : project))
+		)
+		setSelectedProjectId(savedProject.id)
+		setDraft(toDraft(savedProject))
+		setIsCreating(false)
+		setNotice(thumbnailFile ? 'Project and thumbnail saved.' : isNewProject ? 'Project added.' : 'Changes saved.')
+		setIsSaving(false)
+		setIsUploadingThumbnail(false)
+	}
+
+	function requestDeleteConfirmation(project: Project) {
+		setProjectToDelete(project)
+		setDeleteConfirmation('')
+		setDeleteError('')
+	}
+
+	function dismissDeleteConfirmation() {
+		if (deletingProjectId !== null) {
+			return
+		}
+		setProjectToDelete(null)
+		setDeleteConfirmation('')
+		setDeleteError('')
+	}
+
+	async function deleteProject(project: Project) {
 		setErrorMessage('')
 		setNotice('')
+		setDeleteError('')
 		setDeletingProjectId(project.id)
 
 		try {
-			await projectRequest(`/api/projects/${project.id}`, { method: 'DELETE' })
-			const remainingProjects = projects.filter((item) => item.id !== project.id)
+			const result = await projectRequest<{ deleted: { id: number; title: string }; projects: Project[] }>(
+				`/api/projects/${project.id}`,
+				{ method: 'DELETE' }
+			)
+			if (thumbnailInputRef.current) {
+				thumbnailInputRef.current.value = ''
+			}
+			const remainingProjects = result.projects
 			setProjects(remainingProjects)
 			if (selectedProjectId === project.id) {
 				if (remainingProjects[0]) {
@@ -260,8 +393,10 @@ export default function AdminDashboard() {
 				}
 			}
 			setNotice('Project deleted.')
+			setProjectToDelete(null)
+			setDeleteConfirmation('')
 		} catch (deleteError) {
-			setErrorMessage(getMessage(deleteError, 'Could not delete the project.'))
+			setDeleteError(getMessage(deleteError, 'Could not delete the project.'))
 		} finally {
 			setDeletingProjectId(null)
 		}
@@ -283,7 +418,7 @@ export default function AdminDashboard() {
 	}
 
 	return (
-		<div className="admin-shell">
+		<div className={`admin-shell${isEditorOpen ? ' admin-shell--editor-open' : ''}`}>
 			<aside className="admin-sidebar">
 				<div className="admin-brand">
 					<Image src="/studio-logo.png" alt="" width={32} height={32} />
@@ -320,7 +455,7 @@ export default function AdminDashboard() {
 			<header className="admin-topbar">
 				<div className="admin-page-heading">
 					<h1>{sectionTitle}</h1>
-					{activeSection === 'projects' && <span>{projects.length} Total</span>}
+					{activeSection === 'projects' && <span>{projects.length} Total · {featuredCount}/4 pinned</span>}
 				</div>
 				{activeSection === 'projects' && (
 					<div className="admin-topbar-actions">
@@ -365,7 +500,7 @@ export default function AdminDashboard() {
 										<tr key={project.id} className={selectedProjectId === project.id && !isCreating ? 'is-selected' : ''}>
 											<td>
 												<div className="admin-project-name">
-													<span className="admin-project-mark" data-accent={project.accent} aria-hidden="true">
+													<span className="admin-project-mark" aria-hidden="true">
 														{project.title.slice(0, 1).toUpperCase()}
 													</span>
 													<button type="button" onClick={() => selectProject(project)}>{project.title}</button>
@@ -383,7 +518,7 @@ export default function AdminDashboard() {
 													<button type="button" onClick={() => selectProject(project)}>Edit</button>
 													<button
 														type="button"
-														onClick={() => void deleteProject(project)}
+														onClick={() => requestDeleteConfirmation(project)}
 														disabled={deletingProjectId === project.id}
 													>
 														Delete
@@ -400,6 +535,7 @@ export default function AdminDashboard() {
 						</p>
 					</main>
 
+					{isEditorOpen && (
 					<aside className="admin-editor" aria-label={isCreating ? 'Add project' : 'Quick edit project'}>
 						<div className="admin-editor-heading">
 							<h2>{isCreating ? 'New Project' : 'Quick Edit'}</h2>
@@ -407,6 +543,9 @@ export default function AdminDashboard() {
 						</div>
 						{selectedProject || isCreating ? (
 							<form className="admin-project-form" onSubmit={(event) => void saveProject(event)}>
+								<p className="admin-project-number-note">
+									Project number: <strong>{selectedProject ? selectedProject.project_number : 'assigned automatically when saved'}</strong>
+								</p>
 								<label>
 									<span>Project Name</span>
 									<input required value={draft.title} onChange={(event) => updateDraft('title', event.target.value)} />
@@ -415,34 +554,66 @@ export default function AdminDashboard() {
 									<span>Category</span>
 									<input required value={draft.category} onChange={(event) => updateDraft('category', event.target.value)} />
 								</label>
+								<label className="admin-project-short-description">
+									<span>Short Description <small>Shown in project lists</small></span>
+									<textarea required rows={3} value={draft.short_description} onChange={(event) => updateDraft('short_description', event.target.value)} />
+								</label>
 								<label>
-									<span>Description</span>
-									<textarea required rows={4} value={draft.description} onChange={(event) => updateDraft('description', event.target.value)} />
+									<span>Full Description <small>Shown on the project page</small></span>
+									<textarea required rows={5} value={draft.description} onChange={(event) => updateDraft('description', event.target.value)} />
 								</label>
 								<label>
 									<span>Tech Stack <small>Separate items with commas</small></span>
 									<input value={draft.stackText} onChange={(event) => updateDraft('stackText', event.target.value)} />
 								</label>
-								<div className="admin-form-row">
+								<label>
+									<span>Live Project URL <small>Optional</small></span>
+									<input
+										type="url"
+										placeholder="https://example.com"
+										value={draft.live_url}
+										onChange={(event) => updateDraft('live_url', event.target.value)}
+									/>
+								</label>
+								<div className="admin-featured-control">
 									<label>
-										<span>Project Number</span>
-										<input required value={draft.project_number} onChange={(event) => updateDraft('project_number', event.target.value)} />
+										<input
+											type="checkbox"
+											checked={draft.is_featured}
+											disabled={isFeaturedLimitReached}
+											onChange={(event) => setDraft((current) => ({ ...current, is_featured: event.target.checked }))}
+										/>
+										<span>Pin to homepage</span>
 									</label>
+									<small>
+										{isFeaturedLimitReached ? 'All 4 homepage spots are filled. Unpin a project first.' : `${featuredCount}/4 projects pinned`}
+									</small>
+								</div>
+								<div className="admin-thumbnail-field">
+									<div
+										className="admin-thumbnail-preview"
+										style={{ backgroundImage: `url("${thumbnailPreviewUrl ?? selectedProject?.thumbnail_url ?? ''}")` }}
+										role={thumbnailPreviewUrl || selectedProject?.thumbnail_url ? 'img' : undefined}
+										aria-label={thumbnailPreviewUrl || selectedProject?.thumbnail_url ? `${draft.title || 'Project'} thumbnail preview` : undefined}
+									>
+										{!thumbnailPreviewUrl && !selectedProject?.thumbnail_url && <span>Thumbnail preview</span>}
+									</div>
 									<label>
-										<span>Accent</span>
-										<select value={draft.accent} onChange={(event) => updateDraft('accent', event.target.value)}>
-											<option value="commerce">Commerce</option>
-											<option value="workspace">Workspace</option>
-											<option value="studio">Studio</option>
-											<option value="analytics">Analytics</option>
-										</select>
+										<span>Project Thumbnail <small>JPEG, PNG, or WebP · max 5 MB</small></span>
+										<input
+											ref={thumbnailInputRef}
+											type="file"
+											accept="image/jpeg,image/png,image/webp"
+											onChange={chooseThumbnail}
+										/>
 									</label>
+									{thumbnailFile && <small className="admin-thumbnail-filename">Selected: {thumbnailFile.name}</small>}
 								</div>
 								{errorMessage && <p className="admin-feedback admin-feedback--error" role="alert">{errorMessage}</p>}
 								{notice && <p className="admin-feedback" role="status">{notice}</p>}
 								<div className="admin-form-actions">
 									<button className="admin-primary-button" type="submit" disabled={isSaving}>
-										{isSaving ? 'Saving...' : isCreating ? 'Add Project' : 'Save Changes'}
+										{isUploadingThumbnail ? 'Uploading thumbnail...' : isSaving ? 'Saving...' : isCreating ? 'Add Project' : 'Save Changes'}
 									</button>
 									<button className="admin-secondary-button" type="button" onClick={cancelEdit}>Cancel</button>
 								</div>
@@ -451,6 +622,7 @@ export default function AdminDashboard() {
 							<p className="admin-editor-empty">Select a project to edit it.</p>
 						)}
 					</aside>
+					)}
 				</>
 			) : (
 				<main className="admin-main admin-main--placeholder">
@@ -471,6 +643,54 @@ export default function AdminDashboard() {
 					)}
 				</main>
 			)}
+			<dialog
+				ref={deleteDialogRef}
+				className="admin-delete-dialog"
+				aria-labelledby="admin-delete-title"
+				aria-describedby="admin-delete-description"
+				onCancel={(event) => {
+					event.preventDefault()
+					dismissDeleteConfirmation()
+				}}
+				onClick={(event) => {
+					if (event.target === event.currentTarget) {
+						dismissDeleteConfirmation()
+					}
+				}}
+			>
+				{projectToDelete && (
+					<div className="admin-delete-dialog-content">
+						<h2 id="admin-delete-title">Delete project?</h2>
+						<p id="admin-delete-description">
+							To confirm, type the project name exactly as shown: <strong className="admin-delete-project-name">{projectToDelete.title}</strong>
+						</p>
+						<label className="admin-delete-confirmation-field">
+							Project name
+							<input
+								ref={deleteNameInputRef}
+								autoComplete="off"
+								value={deleteConfirmation}
+								onChange={(event) => setDeleteConfirmation(event.target.value)}
+								disabled={isDeletingProject}
+							/>
+						</label>
+						{deleteError && <p className="admin-delete-error" role="alert">{deleteError}</p>}
+						<div className="admin-delete-actions">
+							<button className="admin-secondary-button" type="button" onClick={dismissDeleteConfirmation} disabled={isDeletingProject}>
+								Cancel
+							</button>
+							<button
+								className="admin-delete-confirm-button"
+								type="button"
+								disabled={!canConfirmDelete || isDeletingProject}
+								onClick={() => void deleteProject(projectToDelete)}
+							>
+								{isDeletingProject ? 'Deleting...' : 'Delete project'}
+							</button>
+						</div>
+					</div>
+				)}
+			</dialog>
 		</div>
 	)
 }

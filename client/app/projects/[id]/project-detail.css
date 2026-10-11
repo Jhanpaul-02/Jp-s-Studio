@@ -50,7 +50,27 @@
   line-height: 1.7;
 }
 
+.project-detail__live-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #c4c4c4;
+  color: #f5f5f2;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.project-detail__live-link:hover {
+  background: #f5f5f2;
+  color: #050505;
+}
+
 .project-detail__visual {
+  background-position: center;
+  background-size: cover;
   display: grid;
   min-height: 320px;
   aspect-ratio: 2 / 1;
@@ -58,10 +78,6 @@
   overflow: hidden;
   background: #d7d7d7;
 }
-
-.project-detail__visual--workspace { background: #ded8cd; }
-.project-detail__visual--studio { background: #e4c4ce; }
-.project-detail__visual--analytics { background: #bddcdb; }
 
 .project-detail__mockup {
   display: flex;
@@ -76,11 +92,6 @@
   color: #151515;
   box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.16);
   transform: rotate(-1deg);
-}
-
-.project-detail__visual--studio .project-detail__mockup {
-  background: #111111;
-  color: #ffffff;
 }
 
 .project-detail__mockup-bar {
