@@ -114,6 +114,11 @@
     gap: 2.5rem 1.5rem;
 }
 
+.project-archive__state {
+    grid-column: 1 / -1;
+    color: #a0a0a0;
+}
+
 .archive-project {
     min-width: 0;
 }
@@ -129,16 +134,14 @@
 }
 
 .archive-project__art {
+    background-position: center;
+    background-size: cover;
     display: grid;
     aspect-ratio: 1.68;
     place-items: center;
     overflow: hidden;
     background: #d7d7d7;
 }
-
-.archive-project__art--workspace { background: #ded8cd; }
-.archive-project__art--studio { background: #e4c4ce; }
-.archive-project__art--analytics { background: #bddcdb; }
 
 .archive-project__window {
     width: 78%;
@@ -155,8 +158,6 @@
 
 .archive-project:nth-child(even) .archive-project__window { transform: rotate(2deg); }
 .archive-project:hover .archive-project__window { transform: rotate(0) translateY(-3px); }
-.archive-project__art--studio .archive-project__window { background: #111111; color: #ffffff; }
-
 .archive-project__window-bar {
     display: flex;
     gap: 0.22rem;
@@ -205,9 +206,6 @@
 
 .archive-project__composition i:nth-child(2) { height: 100%; background: #ef8e78; }
 .archive-project__composition i:nth-child(3) { height: 55%; background: #55b9bd; }
-.archive-project__art--studio .archive-project__composition i:nth-child(2) { background: #e86c9d; }
-.archive-project__art--analytics .archive-project__composition i { background: #55b9bd; }
-
 .archive-project__details {
     padding: 1rem 0.15rem 0;
 }

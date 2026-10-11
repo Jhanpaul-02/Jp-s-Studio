@@ -1,15 +1,37 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { projects } from "./myProjects";
+import { fetchProjects, type Project } from "../lib/projects";
 import "./CompOfProjects.css";
 
-const categories = ["All projects", ...new Set(projects.map((project) => project.category))];
-
 export default function CompOfProjects() {
+    const [projects, setProjects] = useState<Project[]>([]);
     const [activeCategory, setActiveCategory] = useState("All projects");
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        fetchProjects()
+            .then((projectList) => {
+                if (isMounted) setProjects(projectList);
+            })
+            .catch(() => {
+                if (isMounted) setHasError(true);
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const categories: string[] = ["All projects", ...new Set(projects.map((project) => project.category))];
     const visibleProjects = activeCategory === "All projects"
         ? projects
         : projects.filter((project) => project.category === activeCategory);
@@ -49,32 +71,44 @@ export default function CompOfProjects() {
                 </div>
 
                 <div className="project-archive__grid">
-                    {visibleProjects.map((project) => (
-                        <article className="archive-project" key={project.title}>
+                    {isLoading ? (
+                        <p className="project-archive__state" role="status">Loading projects...</p>
+                    ) : hasError ? (
+                        <p className="project-archive__state" role="alert">Projects are unavailable right now.</p>
+                    ) : visibleProjects.length === 0 ? (
+                        <p className="project-archive__state">No projects have been published yet.</p>
+                    ) : visibleProjects.map((project) => (
+                        <article className="archive-project" key={project.id}>
                             <Link
                                 className="archive-project__link"
-                                href={`/projects/${project.number}`}
+                                href={`/projects/${project.project_number}`}
                                 aria-label={`View ${project.title} project`}
                             >
-                                <div className={`archive-project__art archive-project__art--${project.accent}`} aria-hidden="true">
-                                    <div className="archive-project__window">
-                                        <div className="archive-project__window-bar"><i /><i /><i /></div>
-                                        <div className="archive-project__window-content">
-                                            <span>{project.category}</span>
-                                            <strong>{project.title}</strong>
-                                            <div className="archive-project__composition"><i /><i /><i /></div>
+                                <div
+                                    className="archive-project__art"
+                                    aria-hidden="true"
+                                    style={{ backgroundImage: project.thumbnail_url ? `url("${project.thumbnail_url}")` : undefined }}
+                                >
+                                    {!project.thumbnail_url && (
+                                        <div className="archive-project__window">
+                                            <div className="archive-project__window-bar"><i /><i /><i /></div>
+                                            <div className="archive-project__window-content">
+                                                <span>{project.category}</span>
+                                                <strong>{project.title}</strong>
+                                                <div className="archive-project__composition"><i /><i /><i /></div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </Link>
                             <div className="archive-project__details">
-                                <p className="archive-project__category">{project.number} / {project.category}</p>
+                                <p className="archive-project__category">{project.project_number} / {project.category}</p>
                                 <h2>{project.title}</h2>
-                                <p className="archive-project__description">{project.description}</p>
+                                <p className="archive-project__description">{project.short_description}</p>
                                 <ul className="archive-project__stack" aria-label={`${project.title} technology stack`}>
                                     {project.stack.map((tool) => <li key={tool}>{tool}</li>)}
                                 </ul>
-                                <Link className="archive-project__view-link" href={`/projects/${project.number}`}>
+                                <Link className="archive-project__view-link" href={`/projects/${project.project_number}`}>
                                     View project <span aria-hidden="true">↗</span>
                                 </Link>
                             </div>

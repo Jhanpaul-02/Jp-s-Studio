@@ -3,20 +3,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import NavBar from "../../../components/navbar";
 import Footer from "../../../pages/Footer";
-import { projects } from "../../../pages/myProjects";
+import { fetchProjects } from "../../../lib/projects";
 import "./project-detail.css";
+
+const apiOrigin = process.env.SERVER_API_ORIGIN ?? "http://localhost:5000";
 
 type ProjectPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export function generateStaticParams() {
-  return projects.map((project) => ({ id: project.number }));
+async function findProject(id: string) {
+  const projects = await fetchProjects(`${apiOrigin}/api/projects`);
+  return projects.find((project) => project.project_number === id);
 }
 
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
   const { id } = await params;
-  const project = projects.find((item) => item.number === id);
+  const project = await findProject(id);
 
   return {
     title: project ? `${project.title} | Jp's Studio` : "Project not found | Jp's Studio",
@@ -26,7 +29,7 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
 
 export default async function ProjectDetailPage({ params }: ProjectPageProps) {
   const { id } = await params;
-  const project = projects.find((item) => item.number === id);
+  const project = await findProject(id);
 
   if (!project) {
     notFound();
@@ -42,18 +45,28 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
           </Link>
 
           <header className="project-detail__header">
-            <p className="project-detail__eyebrow">PROJECT {project.number} / {project.category}</p>
+            <p className="project-detail__eyebrow">PROJECT {project.project_number} / {project.category}</p>
             <h1>{project.title}</h1>
-            <p className="project-detail__description">{project.description}</p>
+            {project.live_url && (
+              <a className="project-detail__live-link" href={project.live_url} target="_blank" rel="noreferrer">
+                View live project <span aria-hidden="true">↗</span>
+              </a>
+            )}
           </header>
 
-          <div className={`project-detail__visual project-detail__visual--${project.accent}`} aria-hidden="true">
-            <div className="project-detail__mockup">
-              <div className="project-detail__mockup-bar"><i /><i /><i /></div>
-              <span>{project.category}</span>
-              <strong>{project.title}</strong>
-              <div className="project-detail__mockup-blocks"><i /><i /><i /></div>
-            </div>
+          <div
+            className="project-detail__visual"
+            aria-hidden="true"
+            style={{ backgroundImage: project.thumbnail_url ? `url("${project.thumbnail_url}")` : undefined }}
+          >
+            {!project.thumbnail_url && (
+              <div className="project-detail__mockup">
+                <div className="project-detail__mockup-bar"><i /><i /><i /></div>
+                <span>{project.category}</span>
+                <strong>{project.title}</strong>
+                <div className="project-detail__mockup-blocks"><i /><i /><i /></div>
+              </div>
+            )}
           </div>
 
           <section className="project-detail__overview" aria-labelledby="project-overview-title">

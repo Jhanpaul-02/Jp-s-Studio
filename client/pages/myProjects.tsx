@@ -1,45 +1,34 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { fetchProjects, type Project } from "../lib/projects";
 import "./myProjects.css";
 
-export const projects = [
-    {
-        title: "Atlas Commerce",
-        category: "E-commerce platform",
-        number: "01",
-        description:
-            "A storefront experience designed to make product discovery and checkout feel effortless.",
-        stack: ["Next.js", "MongoDB", "Stripe"],
-        accent: "commerce",
-    },
-    {
-        title: "Flow Desk",
-        category: "Productivity SaaS",
-        number: "02",
-        description:
-            "A focused workspace for teams to organize projects, assign work, and keep momentum visible.",
-        stack: ["React", "Node.js", "PostgreSQL"],
-        accent: "workspace",
-    },
-    {
-        title: "Signal Studio",
-        category: "Creative portfolio",
-        number: "03",
-        description:
-            "A personal brand experience built to make selected work, process, and point of view memorable.",
-        stack: ["Figma", "Next.js", "CMS"],
-        accent: "studio",
-    },
-    {
-        title: "Pulse Analytics",
-        category: "Data visualization",
-        number: "04",
-        description:
-            "A reporting dashboard that turns complex product and customer data into useful decisions.",
-        stack: ["TypeScript", "React", "Figma"],
-        accent: "analytics",
-    },
-];
-
 export default function Projects() {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        fetchProjects("/api/projects?featured=true")
+            .then((projectList) => {
+                if (isMounted) setProjects(projectList);
+            })
+            .catch(() => {
+                if (isMounted) setHasError(true);
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     return (
         <section className="projects-section" aria-labelledby="projects-title">
             <div className="projects-shell">
@@ -48,41 +37,56 @@ export default function Projects() {
                     <h2 id="projects-title">My Projects</h2>
                 </div>
 
-                <div className="projects-list">
+                {isLoading ? (
+                    <p className="projects-state" role="status">Loading projects...</p>
+                ) : hasError ? (
+                    <p className="projects-state" role="alert">Projects are unavailable right now.</p>
+                ) : projects.length === 0 ? (
+                    <p className="projects-state">No projects have been published yet.</p>
+                ) : (
+                    <div className="projects-list">
                     {projects.map((project, index) => (
                         <article
                             key={`${project.title}-${index}`}
-                            className={`project-row ${project.accent} ${index % 2 === 1 ? "reverse" : ""}`}
+                            className={`project-row ${index % 2 === 1 ? "reverse" : ""}`}
                         >
                             <div className="project-preview" aria-hidden="true">
-                                <div className="preview-window">
-                                    <div className="preview-bar"><i /><i /><i /></div>
-                                    <div className="preview-content">
-                                        <span className="preview-label">{project.category}</span>
-                                        <strong>{project.title}</strong>
-                                        <div className="preview-blocks"><i /><i /><i /></div>
-                                        <div className="preview-chart"><span /><span /><span /><span /><span /></div>
+                                {project.thumbnail_url ? (
+                                    <div
+                                        className="project-thumbnail-image"
+                                        style={{ backgroundImage: `url("${project.thumbnail_url}")` }}
+                                    />
+                                ) : (
+                                    <div className="preview-window">
+                                        <div className="preview-bar"><i /><i /><i /></div>
+                                        <div className="preview-content">
+                                            <span className="preview-label">{project.category}</span>
+                                            <strong>{project.title}</strong>
+                                            <div className="preview-blocks"><i /><i /><i /></div>
+                                            <div className="preview-chart"><span /><span /><span /><span /><span /></div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             <div className="project-info">
-                                <span className="project-number">{project.number}</span>
+                                <span className="project-number">{project.project_number}</span>
                                 <h3>{project.title}</h3>
-                                <p className="project-description">{project.description}</p>
+                                <p className="project-description">{project.short_description}</p>
                                 <ul className="tech-list">
                                     {project.stack.map((tool) => (
                                         <li key={tool}>{tool}</li>
                                     ))}
                                 </ul>
 
-                                <a href="#contact" className="project-link" aria-label={`View ${project.title}`}>
+                                <Link href={`/projects/${project.project_number}`} className="project-link" aria-label={`View ${project.title}`}>
                                     ↗
-                                </a>
+                                </Link>
                             </div>
                         </article>
                     ))}
-                </div>
+                    </div>
+                )}
 
                 <a href="#projects-title" className="projects-more-button">
                     View all projects <span aria-hidden="true">↗</span>
